@@ -1,0 +1,57 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <pthread.h>
+#include <semaphore.h>
+
+int n;                     // Nombre de threads
+sem_t *semaphores;         // Tableau de sémaphores pour synchroniser les threads
+
+void *thread_function(void *arg) {
+    int thread_id = *((int *)arg); // ID du thread
+
+    while (1) {
+        sem_wait(&semaphores[thread_id]); // Attendre son tour
+
+        printf("Thread %d vient de s'exécuter\n", thread_id + 1);
+
+        sem_post(&semaphores[(thread_id + 1) % n]); // Passer la main
+    }
+
+    return NULL;
+}
+
+int main() {
+    printf("Entrez le nombre de threads : ");
+    scanf("%d", &n);
+
+    if (n <= 0) {
+        printf("Le nombre de threads doit être supérieur à 0.\n");
+        return 1;
+    }
+
+    pthread_t threads[n];
+    semaphores = malloc(n * sizeof(sem_t));
+    int thread_ids[n];
+
+    for (int i = 0; i < n; i++) {
+        sem_init(&semaphores[i], 0, 0);
+    }
+
+    sem_post(&semaphores[0]); // Le premier thread commence
+
+    for (int i = 0; i < n; i++) {
+        thread_ids[i] = i;
+        pthread_create(&threads[i], NULL, thread_function, &thread_ids[i]);
+    }
+
+    for (int i = 0; i < n; i++) {
+        pthread_join(threads[i], NULL);
+    }
+
+    for (int i = 0; i < n; i++) {
+        sem_destroy(&semaphores[i]);
+    }
+    free(semaphores);
+
+    return 0;
+}
